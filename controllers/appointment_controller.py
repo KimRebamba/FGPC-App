@@ -140,3 +140,35 @@ def delete_appointment(appointment_id: int, database_path: str | None = None) ->
 
 def delete_appointments(appointment_ids: list[int], database_path: str | None = None) -> int:
     return Appointment.delete_many(appointment_ids, database_path)
+
+
+def cancel_customer_appointment(
+    appointment_id: int,
+    user_id: int,
+    database_path: str | None = None,
+) -> Appointment:
+    """Allow customer to cancel their appointment with strict restrictions (pending only)."""
+    appointment = Appointment.find_by_id(appointment_id, database_path)
+    if appointment is None:
+        raise ValueError("Appointment not found.")
+    if appointment.user_id != user_id:
+        raise ValueError("You can only cancel your own appointments.")
+
+    curr_status = appointment.status.lower()
+    if curr_status == "cancelled":
+        raise ValueError("This appointment has already been cancelled.")
+    if curr_status == "confirmed":
+        raise ValueError("Cannot cancel a confirmed appointment. Please contact support or the administrator.")
+    if curr_status == "completed":
+        raise ValueError("Cannot cancel an appointment that has already been completed.")
+    if curr_status == "rejected":
+        raise ValueError("Cannot cancel a rejected appointment.")
+    if curr_status != "pending":
+        raise ValueError(
+            f"Cannot cancel appointment: only pending appointments can be cancelled (current status: {appointment.status.upper()})."
+        )
+
+    updated = Appointment.update_status(appointment_id, "cancelled", database_path)
+    if updated is None:
+        raise ValueError("Failed to cancel appointment.")
+    return updated

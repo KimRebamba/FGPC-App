@@ -9,7 +9,10 @@ import customtkinter as ctk
 from tkinter import ttk
 from PIL import Image
 
-from controllers.appointment_controller import list_user_appointments
+from controllers.appointment_controller import (
+    cancel_customer_appointment,
+    list_user_appointments,
+)
 from controllers.service_controller import list_categories, list_services
 from models.service import Service
 from models.user import User
@@ -430,28 +433,37 @@ def _build_appointments_page(
     user: User,
     database_path: str | None,
 ) -> ttk.Treeview:
-    """Display this user's appointments."""
+    """Display this user's appointments with cancel capability."""
     hdr = ctk.CTkFrame(parent, fg_color="transparent")
     hdr.pack(fill="x", padx=20, pady=(16, 4))
-    ctk.CTkLabel(hdr, text="My Appointments", font=T.FONT_H2,
-                 text_color=T.TEXT, anchor="w").pack(side="left")
+    ctk.CTkLabel(
+        hdr, text="My Appointments", font=T.FONT_H2, text_color=T.TEXT, anchor="w"
+    ).pack(side="left")
+    ctk.CTkLabel(
+        hdr,
+        text="Only pending appointments can be cancelled.",
+        font=T.FONT_SMALL,
+        text_color=T.MUTED,
+        anchor="e",
+    ).pack(side="right")
 
     table_frame = ctk.CTkFrame(parent, fg_color="transparent")
     table_frame.pack(fill="both", expand=True, padx=20, pady=(8, 0))
 
     table = ttk.Treeview(
         table_frame,
-        columns=("date", "time", "service", "model", "price", "status"),
+        columns=("id", "date", "time", "service", "model", "price", "status"),
         show="headings",
         style="FGP.Treeview",
     )
     for col, heading, width in (
-        ("date",    "Date",        110),
+        ("id",      "#",           50),
+        ("date",    "Date",        100),
         ("time",    "Time",        80),
-        ("service", "Service",     190),
-        ("model",   "Motorcycle",  170),
-        ("price",   "Price",       100),
-        ("status",  "Status",      120),
+        ("service", "Service",     180),
+        ("model",   "Motorcycle",  160),
+        ("price",   "Price",       90),
+        ("status",  "Status",      110),
     ):
         table.heading(col, text=T.spaced(heading.upper()))
         table.column(col, width=width, anchor="w")
@@ -460,6 +472,11 @@ def _build_appointments_page(
     table.configure(yscrollcommand=sb.set)
     table.pack(side="left", fill="both", expand=True)
     sb.pack(side="right", fill="y")
+
+    status_lbl = ctk.CTkLabel(
+        parent, text="", font=T.FONT_SMALL, text_color=T.ERROR, anchor="w"
+    )
+    status_lbl.pack(fill="x", padx=20, pady=(6, 0))
 
     def _load() -> None:
         try:
@@ -472,22 +489,102 @@ def _build_appointments_page(
             }
             for appt in list_user_appointments(user.user_id, database_path=database_path):
                 s_name = services_cache.get(appt.service_id, f"Service #{appt.service_id}")
-                table.insert("", "end", values=(
-                    appt.appointment_date,
-                    appt.appointment_time,
-                    s_name,
-                    appt.motorcycle_model,
-                    f"₱{appt.price_at_booking:.2f}",
-                    appt.status.upper(),
-                ))
+                table.insert(
+                    "",
+                    "end",
+                    iid=str(appt.appointment_id),
+                    values=(
+                        appt.appointment_id,
+                        appt.appointment_date,
+                        appt.appointment_time,
+                        s_name,
+                        appt.motorcycle_model,
+                        f"₱{appt.price_at_booking:.2f}",
+                        appt.status.upper(),
+                    ),
+                )
         except Exception:
             pass
+
+    def _cancel_selected() -> None:
+        status_lbl.configure(text="")
+        sel = table.selection()
+        if not sel:
+            status_lbl.configure(
+                text="Please select an appointment from the list to cancel.",
+                text_color=T.ERROR,
+            )
+            return
+        appt_id = int(sel[0])
+        try:
+            cancel_customer_appointment(
+                appointment_id=appt_id,
+                user_id=user.user_id,
+                database_path=database_path,
+            )
+            _load()
+            status_lbl.configure(
+                text=f"Appointment #{appt_id} has been cancelled successfully.",
+                text_color=T.SUCCESS,
+            )
+        except Exception as exc:
+            status_lbl.configure(text=str(exc), text_color=T.ERROR)
+
+    def _view_note() -> None:
+        status_lbl.configure(text="")
+        sel = table.selection()
+        if not sel:
+            status_lbl.configure(
+                text="Please select an appointment to view its note.",
+                text_color=T.ERROR,
+            )
+            return
+        from models.appointment import Appointment
+        a = Appointment.find_by_id(int(sel[0]), database_path)
+        if not a:
+            status_lbl.configure(text="Appointment not found.", text_color=T.ERROR)
+            return
+
+        top = ctk.CTkToplevel(parent.winfo_toplevel())
+        top.title(f"Appointment #{a.appointment_id} — Note")
+        top.geometry("480x360")
+        top.configure(fg_color=T.BG)
+        top.grab_set()
+
+        hdr_top = ctk.CTkFrame(top, fg_color=T.SURFACE, border_width=1, border_color=T.BORDER, corner_radius=0)
+        hdr_top.pack(fill="x", padx=0, pady=0)
+        ctk.CTkLabel(hdr_top, text=T.spaced(f"APPOINTMENT #{a.appointment_id} NOTE"), font=T.FONT_H2, text_color=T.ACCENT).pack(anchor="w", padx=20, pady=(16, 4))
+        sub_info = f"Date: {a.appointment_date} {a.appointment_time}  •  Status: {a.status.upper()}"
+        ctk.CTkLabel(hdr_top, text=sub_info, font=T.FONT_SMALL, text_color=T.MUTED).pack(anchor="w", padx=20, pady=(0, 16))
+
+        body = ctk.CTkFrame(top, fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=20, pady=16)
+
+        T.label(body, "Your Booking Note / Instructions:", font=T.FONT_LABEL, color=T.TEXT_DIM).pack(anchor="w", pady=(0, 8))
+
+        note_txt = ctk.CTkTextbox(
+            body,
+            fg_color=T.SURFACE2,
+            text_color=T.TEXT,
+            border_width=1,
+            border_color=T.BORDER,
+            font=T.FONT_BODY,
+            wrap="word",
+        )
+        note_txt.pack(fill="both", expand=True, pady=(0, 14))
+        content = a.customer_notes.strip() if a.customer_notes and a.customer_notes.strip() else "(No customer notes attached to this appointment.)"
+        note_txt.insert("1.0", content)
+        note_txt.configure(state="disabled")
+
+        T.ghost_button(body, "CLOSE", command=top.destroy, width=100).pack(anchor="e")
 
     _load()
 
     bar = ctk.CTkFrame(parent, fg_color="transparent")
-    bar.pack(fill="x", padx=20, pady=10)
-    T.ghost_button(bar, "↺  REFRESH", command=_load, width=140).pack(side="left")
+    bar.pack(fill="x", padx=20, pady=(6, 16))
+    T.danger_button(bar, "CANCEL APPOINTMENT", command=_cancel_selected, width=190).pack(side="left")
+    T.ghost_button(bar, "VIEW NOTE", command=_view_note, width=120).pack(side="left", padx=8)
+    T.ghost_button(bar, "↺  REFRESH", command=lambda: (_load(), status_lbl.configure(text="Appointments refreshed.", text_color=T.SUCCESS)), width=120).pack(side="left", padx=8)
 
     return table
 
@@ -597,7 +694,8 @@ def create_customer_window(
                     }
                     for appt in list_user_appointments(user.user_id, database_path=database_path):
                         s_name = services_cache.get(appt.service_id, f"Service #{appt.service_id}")
-                        t.insert("", "end", values=(
+                        t.insert("", "end", iid=str(appt.appointment_id), values=(
+                            appt.appointment_id,
                             appt.appointment_date, appt.appointment_time,
                             s_name,
                             appt.motorcycle_model, f"₱{appt.price_at_booking:.2f}",

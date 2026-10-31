@@ -366,7 +366,7 @@ def _build_services(parent: ctk.CTkFrame, database_path: str | None) -> None:
     T.label(form_inner, "Name", font=T.FONT_LABEL, color=T.TEXT_DIM).grid(
         row=1, column=2, padx=(0, 6), sticky="w"
     )
-    name_e = T.entry(form_inner, placeholder="e.g. Carbon Helmet", width=170)
+    name_e = T.entry(form_inner, placeholder="e.g. Brake Check", width=170)
     name_e.grid(row=1, column=3, padx=(0, 12), sticky="w")
 
     T.label(form_inner, "Price (₱)", font=T.FONT_LABEL, color=T.TEXT_DIM).grid(
