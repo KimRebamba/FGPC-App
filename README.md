@@ -2,6 +2,7 @@
 
 <p align="center">
   <img src="fgp-logo.png" alt="Full Gear Pogi Club logo" width="220">
+  <img src="fgp-logo-small.png" alt="Full Gear Pogi Club small logo" width="80">
 </p>
 
 An e-commerce service application built with Python for a made-up motorcyle gear shop named the "Full Gear Pogi Club (FGPC)".
@@ -54,4 +55,3 @@ uploads/                Runtime-uploaded images (ignored by Git)
    ```
 
 The database tables are created automatically on first launch. Keep local database files and uploaded assets out of source control because they may contain application data or personal information.
-
