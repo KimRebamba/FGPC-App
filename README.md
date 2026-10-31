@@ -5,6 +5,8 @@
   <img src="fgp-logo-small.png" alt="Full Gear Pogi Club small logo" width="80">
 </p>
 
+<hr>
+
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10 or later">
   <img src="https://img.shields.io/badge/CustomTkinter-GUI-1F6AA5" alt="CustomTkinter GUI">
@@ -12,7 +14,9 @@
   <img src="https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite&logoColor=white" alt="SQLite database">
 </p>
 
-An e-commerce service application built with Python for a made-up motorcyle gear shop named the "Full Gear Pogi Club (FGPC)". I used py packages such as CustomTkinter (for UI) & Pillow (for Images). Also, SQLite for database. 
+<p align="center">
+  An e-commerce service application built with Python for a made-up motorcycle gear shop named <strong>Full Gear Pogi Club (FGPC)</strong>. It uses CustomTkinter for the GUI, Pillow for image processing, and SQLite for database management.
+</p>
 
 ## Demo
 
